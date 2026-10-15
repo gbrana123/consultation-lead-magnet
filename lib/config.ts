@@ -103,9 +103,10 @@ export const siteConfig = {
       "Watch the short video below.",
       "Message us on WhatsApp so we can confirm your call.",
     ],
-    whatsappLabel: "Message Us on WhatsApp",
+    whatsappLabel: "Connect with Me on WhatsApp",
     videoTitle: "Sample video",
-    sampleVimeoUrl: "https://vimeo.com/863362136",
+    sampleVideoMp4: "https://mdn.github.io/shared-assets/videos/flower.mp4",
+    sampleVideoWebm: "https://mdn.github.io/shared-assets/videos/flower.webm",
     whatsappMessage:
       "Hi, I just submitted the form for the Free Digital Marketing Consultation. I'd like to know the next steps.",
   },

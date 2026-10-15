@@ -14,20 +14,31 @@ function getVimeoEmbedUrl(value: string): string | null {
 }
 
 export function VimeoEmbed() {
-  const embedUrl = getVimeoEmbedUrl(
-    publicConfig.vimeoUrl || siteConfig.thankYou.sampleVimeoUrl,
-  );
-  if (!embedUrl) return null;
+  const embedUrl = getVimeoEmbedUrl(publicConfig.vimeoUrl);
 
   return (
     <div className="mt-5 aspect-video overflow-hidden rounded-2xl border border-border bg-deep-green shadow-[0_18px_45px_rgba(6,60,45,.16)]">
-      <iframe
-        src={embedUrl}
-        title={siteConfig.thankYou.videoTitle}
-        className="h-full w-full"
-        allow="fullscreen; picture-in-picture"
-        allowFullScreen
-      />
+      {embedUrl ? (
+        <iframe
+          src={embedUrl}
+          title={siteConfig.thankYou.videoTitle}
+          className="h-full w-full"
+          allow="fullscreen; picture-in-picture"
+          allowFullScreen
+        />
+      ) : (
+        <video
+          controls
+          playsInline
+          preload="metadata"
+          aria-label={siteConfig.thankYou.videoTitle}
+          className="h-full w-full bg-black object-cover"
+        >
+          <source src={siteConfig.thankYou.sampleVideoWebm} type="video/webm" />
+          <source src={siteConfig.thankYou.sampleVideoMp4} type="video/mp4" />
+          Your browser does not support HTML video playback.
+        </video>
+      )}
     </div>
   );
 }

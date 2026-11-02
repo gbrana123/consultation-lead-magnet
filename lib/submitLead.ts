@@ -15,12 +15,7 @@ export async function submitLead(
   void _honeypot;
 
   if (!publicConfig.formEndpoint) {
-    // TODO: No backend is connected yet. Set NEXT_PUBLIC_FORM_ENDPOINT to a
-    // Formspree endpoint, Google Apps Script URL, email service endpoint, or a
-    // Next.js route handler such as app/api/lead/route.ts. Without it, this
-    // demo simulates success but does not save the lead.
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    return;
+    throw new Error("No lead form endpoint is configured");
   }
 
   const response = await fetch(publicConfig.formEndpoint, {
@@ -30,6 +25,12 @@ export async function submitLead(
   });
 
   if (!response.ok) {
-    throw new Error("Lead submission failed");
+    const payload = await response
+      .json()
+      .catch(() => null) as { error?: unknown } | null;
+    const serverMessage =
+      typeof payload?.error === "string" ? payload.error.trim() : "";
+
+    throw new Error(serverMessage || "Lead submission failed");
   }
 }

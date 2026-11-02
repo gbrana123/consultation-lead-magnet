@@ -57,9 +57,9 @@ export function validateField(
       }
     }
     case "message":
-      return rawValue.length <= 500
+      return rawValue.length <= 255
         ? undefined
-        : "Please keep your message under 500 characters.";
+        : "Please keep your message under 255 characters.";
     case "companyWebsite":
       return undefined;
   }

@@ -1,9 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { siteConfig } from "@/lib/config";
-import { submitLead } from "@/lib/submitLead";
 import {
   normalizeWebsite,
   validateField,
@@ -12,6 +17,18 @@ import {
   type LeadFormData,
   type ValidationErrors,
 } from "@/lib/validation";
+
+const FLODESK_FORM_ID = "6ae37a6c75c737372cf44867";
+const FLODESK_ROOT_CLASS = `ff-${FLODESK_FORM_ID}`;
+const FLODESK_FORM_ACTION = `https://form.flodesk.com/forms/${FLODESK_FORM_ID}/submit`;
+const FLODESK_CONFIG =
+  "eyJ0cmlnZ2VyIjp7Im1vZGUiOiJpbW1lZGlhdGVseSIsInZhbHVlIjowfSwib25TdWNjZXNzIjp7Im1vZGUiOiJyZWRpcmVjdCIsIm1lc3NhZ2UiOiIiLCJyZWRpcmVjdFVybCI6IiJ9LCJjb2kiOmZhbHNlLCJzaG93Rm9yUmV0dXJuVmlzaXRvcnMiOnRydWUsIm5vdGlmaWNhdGlvbiI6ZmFsc2UsImdkcHIiOnsiYWNjZXB0c01hcmtldGluZyI6ZmFsc2UsInByaXZhY3lQb2xpY3kiOnsiZW5hYmxlZCI6ZmFsc2UsIm1hbmRhdG9yeSI6ZmFsc2V9fSwidHJhY2tpbmdDb25maWciOnsibWV0YVBpeGVsSWQiOiIiLCJjb29raWVCYW5uZXJFbmFibGVkIjpmYWxzZSwiZ29vZ2xlQW5hbHl0aWNzSWQiOiIifX0=";
+
+type FlodeskQueue = ((...args: unknown[]) => void) & { q?: unknown[][] };
+type FlodeskWindow = Window & {
+  FlodeskObject?: string;
+  fd?: FlodeskQueue;
+};
 
 const initialValues: LeadFormData = {
   fullName: "",
@@ -25,6 +42,7 @@ const initialValues: LeadFormData = {
 
 type TextInputProps = {
   id: Exclude<FormField, "message" | "companyWebsite">;
+  name: string;
   label: string;
   placeholder: string;
   value: string;
@@ -38,6 +56,7 @@ type TextInputProps = {
 
 function TextInput({
   id,
+  name,
   label,
   placeholder,
   value,
@@ -56,7 +75,7 @@ function TextInput({
       </label>
       <input
         id={id}
-        name={id}
+        name={name}
         type={type}
         value={value}
         placeholder={placeholder}
@@ -84,11 +103,97 @@ function ShieldIcon() {
 
 export function CTAForm() {
   const router = useRouter();
+  const flodeskRootRef = useRef<HTMLDivElement>(null);
   const { form } = siteConfig;
   const [values, setValues] = useState<LeadFormData>(initialValues);
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+
+  useEffect(() => {
+    const root = flodeskRootRef.current;
+    if (!root) return;
+
+    const handleStageChange = () => {
+      if (root.dataset.ffStage === "success") {
+        router.push("/thank-you/");
+      }
+
+      if (root.dataset.ffStage === "error") {
+        setIsSubmitting(false);
+        setSubmitError(form.generalError);
+      }
+    };
+
+    const observer = new MutationObserver(handleStageChange);
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ["data-ff-stage"],
+    });
+
+    const flodeskWindow = window as FlodeskWindow;
+    flodeskWindow.FlodeskObject = "fd";
+
+    if (!flodeskWindow.fd) {
+      const queuedFd = ((...args: unknown[]) => {
+        (queuedFd.q ??= []).push(args);
+      }) as FlodeskQueue;
+      flodeskWindow.fd = queuedFd;
+    }
+
+    const addFlodeskScript = (
+      id: string,
+      source: string,
+      options: { module?: boolean; noModule?: boolean } = {},
+    ) => {
+      const existingScript = document.getElementById(id);
+      if (existingScript instanceof HTMLScriptElement) {
+        if (options.module && existingScript.dataset.loaded === "true") {
+          root.dataset.flodeskScriptLoaded = "true";
+        }
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.id = id;
+      script.async = true;
+      script.src = source;
+      if (options.module) script.type = "module";
+      if (options.noModule) script.noModule = true;
+      if (options.module) {
+        script.addEventListener(
+          "load",
+          () => {
+            script.dataset.loaded = "true";
+            root.dataset.flodeskScriptLoaded = "true";
+          },
+          { once: true },
+        );
+      }
+      document.head.appendChild(script);
+    };
+
+    addFlodeskScript(
+      "flodesk-universal-module",
+      "https://assets.flodesk.com/universal.mjs",
+      { module: true },
+    );
+    addFlodeskScript(
+      "flodesk-universal-fallback",
+      "https://assets.flodesk.com/universal.js",
+      { noModule: true },
+    );
+
+    if (root.dataset.flodeskHandled !== "true") {
+      flodeskWindow.fd("form:handle", {
+        formId: FLODESK_FORM_ID,
+        rootEl: `.${FLODESK_ROOT_CLASS}`,
+      });
+      root.dataset.flodeskHandled = "true";
+    }
+
+    return () => observer.disconnect();
+  }, [form.generalError, router]);
 
   const changeValue =
     (field: FormField) =>
@@ -110,8 +215,7 @@ export function CTAForm() {
     setErrors((current) => ({ ...current, [field]: error }));
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     setSubmitError("");
 
     const normalizedValues = {
@@ -124,28 +228,44 @@ export function CTAForm() {
 
     const firstInvalidField = (Object.keys(nextErrors) as FormField[])[0];
     if (firstInvalidField) {
+      event.preventDefault();
+      event.stopPropagation();
       window.requestAnimationFrame(() => {
         document.getElementById(firstInvalidField)?.focus();
       });
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      await submitLead(normalizedValues);
-      router.push("/thank-you");
-    } catch {
-      setSubmitError(form.generalError);
-    } finally {
-      setIsSubmitting(false);
+    if (normalizedValues.companyWebsite) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
     }
+
+    const websiteInput = event.currentTarget.elements.namedItem(
+      "fields.websiteOrFacebookLink",
+    );
+    if (websiteInput instanceof HTMLInputElement) {
+      websiteInput.value = normalizedValues.website;
+    }
+
+    setIsSubmitting(true);
   };
 
   return (
     <section id="book" className="relative overflow-hidden bg-soft-background py-14 sm:py-20" aria-labelledby="form-title">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-52 bg-[radial-gradient(circle_at_top,rgba(24,237,138,.16),transparent_70%)]" aria-hidden="true" />
       <div className="section-shell relative">
-        <div className="mx-auto max-w-xl rounded-[1.75rem] border border-border bg-[linear-gradient(145deg,rgba(255,255,255,.98),rgba(239,255,247,.96))] p-5 shadow-[0_24px_70px_rgba(6,60,45,.12)] sm:p-8">
+        <div
+          ref={flodeskRootRef}
+          className={`${FLODESK_ROOT_CLASS} mx-auto max-w-xl rounded-[1.75rem] border border-border bg-[linear-gradient(145deg,rgba(255,255,255,.98),rgba(239,255,247,.96))] p-5 shadow-[0_24px_70px_rgba(6,60,45,.12)] sm:p-8`}
+          data-ff-el="root"
+          data-ff-version="3"
+          data-ff-type="inline"
+          data-ff-name="inlineNoImage"
+          data-ff-stage="default"
+        >
+          <div data-ff-el="config" data-ff-config={FLODESK_CONFIG} hidden />
           <h2 id="form-title" className="text-balance text-center text-3xl font-extrabold tracking-[-0.035em] text-foreground sm:text-4xl">
             {form.title}
           </h2>
@@ -158,9 +278,19 @@ export function CTAForm() {
             ))}
           </div>
 
-          <form className="mt-8 space-y-5" noValidate onSubmit={handleSubmit}>
+          <form
+            className="mt-8"
+            action={FLODESK_FORM_ACTION}
+            method="post"
+            noValidate
+            data-ff-el="form"
+            onSubmitCapture={handleSubmit}
+          >
+            <div className="space-y-5" data-ff-el="content">
+            <div className="space-y-5" data-ff-el="fields">
             <TextInput
               id="fullName"
+              name="firstName"
               label={form.fields.fullName.label}
               placeholder={form.fields.fullName.placeholder}
               value={values.fullName}
@@ -172,6 +302,7 @@ export function CTAForm() {
             />
             <TextInput
               id="email"
+              name="email"
               label={form.fields.email.label}
               placeholder={form.fields.email.placeholder}
               value={values.email}
@@ -184,6 +315,7 @@ export function CTAForm() {
             />
             <TextInput
               id="whatsapp"
+              name="fields.whatsappNumber"
               label={form.fields.whatsapp.label}
               placeholder={form.fields.whatsapp.placeholder}
               value={values.whatsapp}
@@ -196,6 +328,7 @@ export function CTAForm() {
             />
             <TextInput
               id="businessName"
+              name="fields.businessName"
               label={form.fields.businessName.label}
               placeholder={form.fields.businessName.placeholder}
               value={values.businessName}
@@ -207,6 +340,7 @@ export function CTAForm() {
             />
             <TextInput
               id="website"
+              name="fields.websiteOrFacebookLink"
               label={form.fields.website.label}
               placeholder={form.fields.website.placeholder}
               value={values.website}
@@ -220,9 +354,9 @@ export function CTAForm() {
               <label htmlFor="message" className="mb-2 block text-sm font-bold text-foreground">{form.fields.message.label}</label>
               <textarea
                 id="message"
-                name="message"
+                name="fields.anythingYouSay"
                 rows={4}
-                maxLength={500}
+                maxLength={255}
                 value={values.message}
                 placeholder={form.fields.message.placeholder}
                 className="form-control min-h-32 resize-y"
@@ -238,13 +372,15 @@ export function CTAForm() {
               <label htmlFor="companyWebsite">Company website</label>
               <input
                 id="companyWebsite"
-                name="companyWebsite"
+                name="confirm_email_address"
                 type="text"
                 value={values.companyWebsite}
                 tabIndex={-1}
                 autoComplete="off"
                 onChange={changeValue("companyWebsite")}
               />
+            </div>
+
             </div>
 
             {submitError ? (
@@ -256,6 +392,7 @@ export function CTAForm() {
             <button
               type="submit"
               disabled={isSubmitting}
+              data-ff-el="submit"
               className="flex min-h-13 w-full items-center justify-center rounded-full bg-primary px-6 py-3.5 text-base font-bold text-white shadow-[0_14px_30px_rgba(8,122,87,.24)] transition hover:-translate-y-0.5 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-65 disabled:hover:translate-y-0"
             >
               {isSubmitting ? form.submitting : form.submit}
@@ -264,6 +401,10 @@ export function CTAForm() {
             <p className="flex items-center justify-center gap-1.5 text-center text-sm font-medium text-muted">
               <ShieldIcon /> {form.trust}
             </p>
+            </div>
+
+            <div data-ff-el="success" hidden />
+            <div data-ff-el="error" hidden />
           </form>
         </div>
       </div>

@@ -34,8 +34,7 @@ export function VimeoEmbed() {
           aria-label={siteConfig.thankYou.videoTitle}
           className="h-full w-full bg-black object-cover"
         >
-          <source src={siteConfig.thankYou.sampleVideoWebm} type="video/webm" />
-          <source src={siteConfig.thankYou.sampleVideoMp4} type="video/mp4" />
+          <source src={siteConfig.thankYou.welcomeVideoMp4} type="video/mp4" />
           Your browser does not support HTML video playback.
         </video>
       )}

@@ -1,6 +1,7 @@
 node_modules
 .next
 out
+deployment
 .env
 .env.local
 .env.*.local

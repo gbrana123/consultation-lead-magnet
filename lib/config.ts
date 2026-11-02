@@ -104,9 +104,8 @@ export const siteConfig = {
       "Message us on WhatsApp so we can confirm your call.",
     ],
     whatsappLabel: "Connect with Me on WhatsApp",
-    videoTitle: "Sample video",
-    sampleVideoMp4: "https://mdn.github.io/shared-assets/videos/flower.mp4",
-    sampleVideoWebm: "https://mdn.github.io/shared-assets/videos/flower.webm",
+    videoTitle: "GrowNep welcome message",
+    welcomeVideoMp4: "/welcome-message.mp4",
     whatsappMessage:
       "Hi, I just submitted the form for the Free Digital Marketing Consultation. I'd like to know the next steps.",
   },
@@ -115,6 +114,8 @@ export const siteConfig = {
 export const publicConfig = {
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "",
   vimeoUrl: process.env.NEXT_PUBLIC_VIMEO_URL ?? "",
-  whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "",
-  formEndpoint: process.env.NEXT_PUBLIC_FORM_ENDPOINT ?? "",
+  whatsappNumber:
+    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "9779864683116",
+  formEndpoint:
+    process.env.NEXT_PUBLIC_FORM_ENDPOINT ?? "/submit-consultation.php",
 } as const;

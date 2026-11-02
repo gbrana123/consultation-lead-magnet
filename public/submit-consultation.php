@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 header('Content-Type: application/json; charset=UTF-8');
 header('Cache-Control: no-store, max-age=0');
+set_time_limit(20);
 
 function respond(int $status, array $payload): void
 {
@@ -266,7 +267,7 @@ if (filter_var($fromAddress, FILTER_VALIDATE_EMAIL) && is_executable('/sbin/send
         implode("\r\n", $headers)
     );
 } else {
-    respond(503, ['ok' => false, 'error' => 'Authenticated email delivery is required']);
+    respond(503, ['ok' => false, 'error' => 'Email sending is unavailable on the server']);
 }
 
 if (!$sent) {

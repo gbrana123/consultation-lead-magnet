@@ -258,9 +258,9 @@ export function CTAForm() {
 
     try {
       await submitLead(normalizedValues);
-    } catch {
+    } catch (error) {
       setIsSubmitting(false);
-      setSubmitError(form.generalError);
+      setSubmitError(error instanceof Error ? error.message : form.generalError);
       return;
     }
 

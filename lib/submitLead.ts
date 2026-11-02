@@ -18,11 +18,25 @@ export async function submitLead(
     throw new Error("No lead form endpoint is configured");
   }
 
-  const response = await fetch(publicConfig.formEndpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(lead satisfies LeadSubmission),
-  });
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 12000);
+
+  let response: Response;
+  try {
+    response = await fetch(publicConfig.formEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(lead satisfies LeadSubmission),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("The email notification timed out. Please try again.");
+    }
+    throw new Error("The email notification could not be reached. Please try again.");
+  } finally {
+    window.clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     const payload = await response

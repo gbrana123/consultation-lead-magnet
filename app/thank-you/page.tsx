@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { EmailButton } from "@/components/EmailButton";
 import { Header } from "@/components/Header";
 import { VimeoEmbed } from "@/components/VimeoEmbed";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
@@ -44,6 +45,7 @@ export default function ThankYouPage() {
                 <span>{thankYou.steps[1]}</span>
               </div>
               <WhatsAppButton />
+              <EmailButton />
             </li>
           </ol>
         </section>

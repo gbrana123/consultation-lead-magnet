@@ -9,6 +9,7 @@ import {
   type FormEvent,
 } from "react";
 import { siteConfig } from "@/lib/config";
+import { submitLead } from "@/lib/submitLead";
 import {
   normalizeWebsite,
   validateField,
@@ -104,6 +105,7 @@ function ShieldIcon() {
 export function CTAForm() {
   const router = useRouter();
   const flodeskRootRef = useRef<HTMLDivElement>(null);
+  const allowFlodeskSubmitRef = useRef(false);
   const { form } = siteConfig;
   const [values, setValues] = useState<LeadFormData>(initialValues);
   const [errors, setErrors] = useState<ValidationErrors>({});
@@ -215,7 +217,7 @@ export function CTAForm() {
     setErrors((current) => ({ ...current, [field]: error }));
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     setSubmitError("");
 
     const normalizedValues = {
@@ -242,14 +244,35 @@ export function CTAForm() {
       return;
     }
 
-    const websiteInput = event.currentTarget.elements.namedItem(
+    if (allowFlodeskSubmitRef.current) {
+      allowFlodeskSubmitRef.current = false;
+      setIsSubmitting(true);
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const formElement = event.currentTarget;
+    setIsSubmitting(true);
+
+    try {
+      await submitLead(normalizedValues);
+    } catch {
+      setIsSubmitting(false);
+      setSubmitError(form.generalError);
+      return;
+    }
+
+    const websiteInput = formElement.elements.namedItem(
       "fields.websiteOrFacebookLink",
     );
     if (websiteInput instanceof HTMLInputElement) {
       websiteInput.value = normalizedValues.website;
     }
 
-    setIsSubmitting(true);
+    allowFlodeskSubmitRef.current = true;
+    formElement.requestSubmit();
   };
 
   return (

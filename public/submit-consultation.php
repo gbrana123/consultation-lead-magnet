@@ -196,8 +196,8 @@ $deliveryConfig = is_readable($recipientConfig) ? require $recipientConfig : '';
 $recipient = is_array($deliveryConfig)
     ? trim((string) ($deliveryConfig['recipient'] ?? ''))
     : trim((string) $deliveryConfig);
-if (!is_string($recipient) || !filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
-    respond(503, ['ok' => false, 'error' => 'Email delivery is not configured']);
+if (!filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+    $recipient = 'digitalgb@grownep.com';
 }
 
 $cleanHeaderValue = static function (string $value): string {

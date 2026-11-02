@@ -104,11 +104,6 @@ export const siteConfig = {
       "Message us on WhatsApp so we can confirm your call.",
     ],
     whatsappLabel: "Connect with Me on WhatsApp",
-    emailLabel: "Connect with Me via Email",
-    contactEmail: "digitalgb@grownep.com",
-    emailSubject: "Free Digital Marketing Consultation",
-    emailMessage:
-      "Hi, I just submitted the form for the Free Digital Marketing Consultation. I'd like to know the next steps.",
     videoTitle: "GrowNep welcome message",
     welcomeVideoMp4: "/welcome-message.mp4",
     whatsappMessage:

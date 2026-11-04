@@ -104,8 +104,8 @@ export const siteConfig = {
       "Message us on WhatsApp so we can confirm your call.",
     ],
     whatsappLabel: "Connect with Me on WhatsApp",
-    videoTitle: "GrowNep welcome message",
-    welcomeVideoMp4: "/welcome-message.mp4",
+    videoTitle: "Temporary consultation welcome video",
+    welcomeVideoMp4: "/sample-video.mp4",
     whatsappMessage:
       "Hi, I just submitted the form for the Free Digital Marketing Consultation. I'd like to know the next steps.",
   },

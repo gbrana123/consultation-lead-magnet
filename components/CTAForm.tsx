@@ -27,6 +27,13 @@ const FLODESK_FIELD_IDS = {
   message: `${FLODESK_ROOT_CLASS}-xROqsEG5Wt`,
 } as const;
 
+const FLODESK_FIELD_NAMES = {
+  whatsapp: "fields.whatsappNumber",
+  businessName: "fields.businessName",
+  website: "fields.websiteOrFacebookLink",
+  message: "fields.anythingYouSay",
+} as const;
+
 type FlodeskWindow = Window & {
   fd?: ((...args: unknown[]) => void) & { q?: unknown[][] };
 };
@@ -274,7 +281,7 @@ export function CTAForm() {
             <TextInput
               id="whatsapp"
               htmlId={FLODESK_FIELD_IDS.whatsapp}
-              name="fields."
+              name={FLODESK_FIELD_NAMES.whatsapp}
               label={form.fields.whatsapp.label}
               placeholder={form.fields.whatsapp.placeholder}
               value={values.whatsapp}
@@ -288,7 +295,7 @@ export function CTAForm() {
             <TextInput
               id="businessName"
               htmlId={FLODESK_FIELD_IDS.businessName}
-              name="fields."
+              name={FLODESK_FIELD_NAMES.businessName}
               label={form.fields.businessName.label}
               placeholder={form.fields.businessName.placeholder}
               value={values.businessName}
@@ -301,7 +308,7 @@ export function CTAForm() {
             <TextInput
               id="website"
               htmlId={FLODESK_FIELD_IDS.website}
-              name="fields."
+              name={FLODESK_FIELD_NAMES.website}
               label={form.fields.website.label}
               placeholder={form.fields.website.placeholder}
               value={values.website}
@@ -316,7 +323,7 @@ export function CTAForm() {
               <textarea
                 id={FLODESK_FIELD_IDS.message}
                 data-form-field="message"
-                name="fields."
+                name={FLODESK_FIELD_NAMES.message}
                 rows={4}
                 maxLength={255}
                 value={values.message}

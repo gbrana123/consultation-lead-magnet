@@ -319,11 +319,10 @@ export function CTAForm() {
               onBlur={blurField("website")}
             />
             <div>
-              <label htmlFor={FLODESK_FIELD_IDS.message} className="mb-2 block text-sm font-bold text-foreground">{form.fields.message.label}</label>
+              <label htmlFor={`${FLODESK_FIELD_IDS.message}-display`} className="mb-2 block text-sm font-bold text-foreground">{form.fields.message.label}</label>
               <textarea
-                id={FLODESK_FIELD_IDS.message}
+                id={`${FLODESK_FIELD_IDS.message}-display`}
                 data-form-field="message"
-                name={FLODESK_FIELD_NAMES.message}
                 rows={4}
                 maxLength={255}
                 value={values.message}
@@ -333,6 +332,17 @@ export function CTAForm() {
                 aria-describedby={errors.message ? "message-error" : undefined}
                 onChange={changeValue("message")}
                 onBlur={blurField("message")}
+              />
+              <input
+                id={FLODESK_FIELD_IDS.message}
+                name={FLODESK_FIELD_NAMES.message}
+                type="text"
+                maxLength={255}
+                value={values.message}
+                readOnly
+                tabIndex={-1}
+                aria-hidden="true"
+                className="hidden"
               />
               {errors.message ? <p id="message-error" role="alert" className="mt-1.5 text-sm font-medium text-error">{errors.message}</p> : null}
             </div>

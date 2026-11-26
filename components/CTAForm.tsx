@@ -1,9 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { siteConfig } from "@/lib/config";
-import { submitLead } from "@/lib/submitLead";
 import {
   normalizeWebsite,
   validateField,
@@ -14,6 +13,23 @@ import {
 } from "@/lib/validation";
 
 const FORM_ROOT_CLASS = "consultation-form";
+const FLODESK_FORM_ID = "6b07a630f7eb41a83ef6be4e";
+const FLODESK_ROOT_CLASS = `ff-${FLODESK_FORM_ID}`;
+const FLODESK_ACTION = `https://form.flodesk.com/forms/${FLODESK_FORM_ID}/submit`;
+const FLODESK_CONFIG = "eyJ0cmlnZ2VyIjp7Im1vZGUiOiJpbW1lZGlhdGVseSIsInZhbHVlIjowfSwib25TdWNjZXNzIjp7Im1vZGUiOiJyZWRpcmVjdCIsIm1lc3NhZ2UiOiIiLCJyZWRpcmVjdFVybCI6Imh0dHBzOi8vZGlnaXRhbGdiLmdyb3duZXAuY29tL3RoYW5rLXlvdS8ifSwiY29pIjpmYWxzZSwic2hvd0ZvclJldHVyblZpc2l0b3JzIjp0cnVlLCJub3RpZmljYXRpb24iOmZhbHNlLCJnZHByIjp7ImFjY2VwdHNNYXJrZXRpbmciOmZhbHNlLCJwcml2YWN5UG9saWN5Ijp7ImVuYWJsZWQiOmZhbHNlLCJtYW5kYXRvcnkiOmZhbHNlfX0sInRyYWNraW5nQ29uZmlnIjp7Im1ldGFQaXhlbElkIjoiIiwiY29va2llQmFubmVyRW5hYmxlZCI6ZmFsc2UsImdvb2dsZUFuYWx5dGljc0lkIjoiIn19";
+
+const FLODESK_FIELD_IDS = {
+  fullName: `${FLODESK_ROOT_CLASS}-firstName`,
+  email: `${FLODESK_ROOT_CLASS}-email`,
+  whatsapp: `${FLODESK_ROOT_CLASS}-dI54OlXoKs`,
+  website: `${FLODESK_ROOT_CLASS}-LYUOlXNi74`,
+  businessName: `${FLODESK_ROOT_CLASS}-7nPPrJOgbs`,
+  message: `${FLODESK_ROOT_CLASS}-xROqsEG5Wt`,
+} as const;
+
+type FlodeskWindow = Window & {
+  fd?: ((...args: unknown[]) => void) & { q?: unknown[][] };
+};
 
 const initialValues: LeadFormData = {
   fullName: "",
@@ -27,6 +43,7 @@ const initialValues: LeadFormData = {
 
 type TextInputProps = {
   id: Exclude<FormField, "message" | "companyWebsite">;
+  htmlId: string;
   name: string;
   label: string;
   placeholder: string;
@@ -41,6 +58,7 @@ type TextInputProps = {
 
 function TextInput({
   id,
+  htmlId,
   name,
   label,
   placeholder,
@@ -55,11 +73,12 @@ function TextInput({
   const errorId = `${id}-error`;
   return (
     <div>
-      <label htmlFor={id} className="mb-2 block text-sm font-bold text-foreground">
+      <label htmlFor={htmlId} className="mb-2 block text-sm font-bold text-foreground">
         {label}{required ? <span className="ml-1 text-error" aria-hidden="true">*</span> : null}
       </label>
       <input
-        id={id}
+        id={htmlId}
+        data-form-field={id}
         name={name}
         type={type}
         value={value}
@@ -93,6 +112,51 @@ export function CTAForm() {
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const formRootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const flodeskWindow = window as FlodeskWindow;
+    if (!flodeskWindow.fd) {
+      const queuedFd = ((...args: unknown[]) => {
+        queuedFd.q = queuedFd.q || [];
+        queuedFd.q.push(args);
+      }) as NonNullable<FlodeskWindow["fd"]>;
+      queuedFd.q = [];
+      flodeskWindow.fd = queuedFd;
+    }
+
+    const addScript = (id: string, src: string, options?: { type?: string; noModule?: boolean }) => {
+      if (document.getElementById(id)) return;
+      const script = document.createElement("script");
+      script.id = id;
+      script.src = src;
+      script.async = true;
+      if (options?.type) script.type = options.type;
+      if (options?.noModule) script.noModule = true;
+      document.head.appendChild(script);
+    };
+
+    addScript("flodesk-universal-module", "https://assets.flodesk.com/universal.mjs", { type: "module" });
+    addScript("flodesk-universal-fallback", "https://assets.flodesk.com/universal.js", { noModule: true });
+    flodeskWindow.fd?.("form:handle", {
+      formId: FLODESK_FORM_ID,
+      rootEl: `.${FLODESK_ROOT_CLASS}`,
+    });
+
+    const root = formRootRef.current;
+    if (!root) return;
+    const observer = new MutationObserver(() => {
+      const stage = root.dataset.ffStage;
+      if (stage === "success") {
+        router.push("/thank-you/");
+      } else if (stage === "error") {
+        setIsSubmitting(false);
+        setSubmitError(form.generalError);
+      }
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ["data-ff-stage"] });
+    return () => observer.disconnect();
+  }, [form.generalError, router]);
 
   const changeValue =
     (field: FormField) =>
@@ -114,7 +178,7 @@ export function CTAForm() {
     setErrors((current) => ({ ...current, [field]: error }));
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     setSubmitError("");
 
     const normalizedValues = {
@@ -130,7 +194,7 @@ export function CTAForm() {
       event.preventDefault();
       event.stopPropagation();
       window.requestAnimationFrame(() => {
-        document.getElementById(firstInvalidField)?.focus();
+        document.querySelector<HTMLElement>(`[data-form-field="${firstInvalidField}"]`)?.focus();
       });
       return;
     }
@@ -141,16 +205,7 @@ export function CTAForm() {
       return;
     }
 
-    event.preventDefault();
-    event.stopPropagation();
     setIsSubmitting(true);
-    try {
-      await submitLead(normalizedValues);
-      router.push("/thank-you/");
-    } catch (error) {
-      setIsSubmitting(false);
-      setSubmitError(error instanceof Error ? error.message : form.generalError);
-    }
   };
 
   return (
@@ -158,8 +213,15 @@ export function CTAForm() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-52 bg-[radial-gradient(circle_at_top,rgba(24,237,138,.16),transparent_70%)]" aria-hidden="true" />
       <div className="section-shell relative">
         <div
-          className={`${FORM_ROOT_CLASS} mx-auto max-w-xl rounded-[1.75rem] border border-border bg-[linear-gradient(145deg,rgba(255,255,255,.98),rgba(239,255,247,.96))] p-5 shadow-[0_24px_70px_rgba(6,60,45,.12)] sm:p-8`}
+          ref={formRootRef}
+          className={`${FLODESK_ROOT_CLASS} ${FORM_ROOT_CLASS} mx-auto max-w-xl rounded-[1.75rem] border border-border bg-[linear-gradient(145deg,rgba(255,255,255,.98),rgba(239,255,247,.96))] p-5 shadow-[0_24px_70px_rgba(6,60,45,.12)] sm:p-8`}
+          data-ff-el="root"
+          data-ff-version="3"
+          data-ff-type="inline"
+          data-ff-name="inlineNoImage"
+          data-ff-stage="default"
         >
+          <div data-ff-el="config" data-ff-config={FLODESK_CONFIG} className="hidden" />
           <h2 id="form-title" className="text-balance text-center text-3xl font-extrabold tracking-[-0.035em] text-foreground sm:text-4xl">
             {form.title}
           </h2>
@@ -174,14 +236,17 @@ export function CTAForm() {
 
           <form
             className="mt-8"
-            action="/submit-consultation.php"
+            action={FLODESK_ACTION}
             method="post"
+            data-ff-el="form"
             noValidate
-            onSubmit={handleSubmit}
+            onSubmitCapture={handleSubmit}
           >
-            <div className="space-y-5">
+            <div data-ff-el="content">
+            <div data-ff-el="fields" className="space-y-5">
             <TextInput
               id="fullName"
+              htmlId={FLODESK_FIELD_IDS.fullName}
               name="firstName"
               label={form.fields.fullName.label}
               placeholder={form.fields.fullName.placeholder}
@@ -194,6 +259,7 @@ export function CTAForm() {
             />
             <TextInput
               id="email"
+              htmlId={FLODESK_FIELD_IDS.email}
               name="email"
               label={form.fields.email.label}
               placeholder={form.fields.email.placeholder}
@@ -207,7 +273,8 @@ export function CTAForm() {
             />
             <TextInput
               id="whatsapp"
-              name="fields.whatsappNumber"
+              htmlId={FLODESK_FIELD_IDS.whatsapp}
+              name="fields."
               label={form.fields.whatsapp.label}
               placeholder={form.fields.whatsapp.placeholder}
               value={values.whatsapp}
@@ -220,7 +287,8 @@ export function CTAForm() {
             />
             <TextInput
               id="businessName"
-              name="fields.businessName"
+              htmlId={FLODESK_FIELD_IDS.businessName}
+              name="fields."
               label={form.fields.businessName.label}
               placeholder={form.fields.businessName.placeholder}
               value={values.businessName}
@@ -232,7 +300,8 @@ export function CTAForm() {
             />
             <TextInput
               id="website"
-              name="fields.websiteOrFacebookLink"
+              htmlId={FLODESK_FIELD_IDS.website}
+              name="fields."
               label={form.fields.website.label}
               placeholder={form.fields.website.placeholder}
               value={values.website}
@@ -243,10 +312,11 @@ export function CTAForm() {
               onBlur={blurField("website")}
             />
             <div>
-              <label htmlFor="message" className="mb-2 block text-sm font-bold text-foreground">{form.fields.message.label}</label>
+              <label htmlFor={FLODESK_FIELD_IDS.message} className="mb-2 block text-sm font-bold text-foreground">{form.fields.message.label}</label>
               <textarea
-                id="message"
-                name="fields.anythingYouSay"
+                id={FLODESK_FIELD_IDS.message}
+                data-form-field="message"
+                name="fields."
                 rows={4}
                 maxLength={255}
                 value={values.message}
@@ -281,6 +351,7 @@ export function CTAForm() {
 
             <button
               type="submit"
+              data-ff-el="submit"
               disabled={isSubmitting}
               className="flex min-h-13 w-full items-center justify-center rounded-full bg-primary px-6 py-3.5 text-base font-bold text-white shadow-[0_14px_30px_rgba(8,122,87,.24)] transition hover:-translate-y-0.5 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-65 disabled:hover:translate-y-0"
             >
@@ -291,6 +362,9 @@ export function CTAForm() {
               <ShieldIcon /> {form.trust}
             </p>
             </div>
+            </div>
+            <div data-ff-el="success" className="hidden" aria-live="polite" />
+            <div data-ff-el="error" className="hidden" aria-live="assertive" />
           </form>
         </div>
       </div>

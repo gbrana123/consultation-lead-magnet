@@ -28,10 +28,10 @@ const FLODESK_FIELD_IDS = {
 } as const;
 
 const FLODESK_FIELD_NAMES = {
-  whatsapp: "fields.whatsappNumber",
+  whatsapp: "fields.whatsapp",
   businessName: "fields.businessName",
   website: "fields.websiteOrFacebookLink",
-  message: "fields.anythingYouSay",
+  message: "fields.anythingYouWantToSay",
 } as const;
 
 type FlodeskWindow = Window & {
